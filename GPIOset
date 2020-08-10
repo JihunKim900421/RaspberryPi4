@@ -102,6 +102,9 @@ void LED_off(int port) {
     gpio_clear(addr, port);
 }
 
+/* Not finshed to excute in Background. It's doesn't work simultaneously with other functions.
+   If you don't want any infinite loop, DO NOT USING THIS "BLINK" FUNCTION */
+   
 void Blink(int port, int time) {
     volatile unsigned int* addr = get_base_addr();
     gpio_sel(addr, port, GPIO_OUT);
@@ -122,17 +125,4 @@ void Blink_off(int port) {
 #endif
 #include "gpiojay.h"
 
-int main()
-{
-    volatile unsigned int* addr = get_base_addr();
 
-    gpio_mode(addr, 0, GPIO_OUT);
-
-    gpio_set(addr, 0);
-
-    gpio_lev(addr, 0);
-
-    gpio_clear(addr, 0);
-
-    return 0;
-}
