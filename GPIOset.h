@@ -26,12 +26,11 @@ void gpio_clear(unsigned int* addr, int port); // Port clear
 // User Define Function
 void LED_on(int port);
 void LED_off(int port);
-void Blink(int port, int time);
-void Blink_off(int port);
+int Blink(int port, int time);
+void Blink_off(int port, int cpid);
 
 unsigned int* get_base_addr() {
     int fd = open("/dev/gpiomem", O_RDWR | O_SYNC);
-
     if (fd < 0) {
         printf("Can not open /dev/mem\n");
         exit(-1);
@@ -39,9 +38,9 @@ unsigned int* get_base_addr() {
 
 #define PAGE_SIZE (4096)
     void* mmaped = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, GPIO_BASE);
-        if (mmaped < 0) {
-            printf("mmap failed\n");
-            exit(-1);
+    if (mmaped < 0) {
+        printf("mmap failed\n");
+        exit(-1);
     }
     close(fd);
 
@@ -60,7 +59,6 @@ void gpio_set(unsigned int* addr, int port, int mode) {
         printf("Port is out of range : %d\n");
         exit(-1);
     }
-
     if (mode == 1) {
         *(addr + 7) = 0x1 << port;
     }
@@ -102,27 +100,36 @@ void LED_off(int port) {
     gpio_clear(addr, port);
 }
 
-/* Not finshed to excute in Background. It's doesn't work simultaneously with other functions.
-   If you don't want any infinite loop, DO NOT USING THIS "BLINK" FUNCTION */
-   
-void Blink(int port, int time) {
+int Blink(int port, int time) {
     volatile unsigned int* addr = get_base_addr();
     gpio_sel(addr, port, GPIO_OUT);
-    while (1) {
-        gpio_set(addr, port, GPIO_OUT);
-        gpio_lev(addr, port, GPIO_OUT);
-        usleep(10000 * time);
-        gpio_clear(addr, port);
-        usleep(10000 * time);
+    pid_t pid;
+    pid = fork();
+
+    if (pid == 0) {
+        while (1) {
+            gpio_set(addr, port, GPIO_OUT);
+            gpio_lev(addr, port, GPIO_OUT);
+            usleep(10000 * time);
+            gpio_clear(addr, port);
+            usleep(10000 * time);
+        }
+    }
+    else if (pid == -1) {
+        printf("fork Failed\n");
+        exit(-1);
+    }
+    else {
+        return (int)pid;
     }
 }
 
-void Blink_off(int port) {
+void Blink_off(int port, int cpid) {
     volatile unsigned int* addr = get_base_addr();
     gpio_clear(addr, port);
+    kill((pid_t)cpid, 1);
 }
 
-#endif
-#include "gpiojay.h"
 
+#endif
 
